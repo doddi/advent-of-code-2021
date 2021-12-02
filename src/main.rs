@@ -1,27 +1,77 @@
 use std::fs::File;
 use std::io;
 use std::io::BufRead;
+use std::process::exit;
 
 fn main() {
     let lines = read_lines();
 
-    let mut count = 0;
-    for i in 0..lines.len() - 2 {
-        let sum = lines.get(i).unwrap() + lines.get(i+1).unwrap() + lines.get(i+2).unwrap();
-        let next_sum = lines.get(i+1).unwrap() + lines.get(i+2).unwrap() + lines.get(i+3).unwrap();
+    let tokens = split_lines(lines);
 
-        if sum < next_sum {
-            count = count + 1;
-        }
-    }
-    println!("{}", count)
+    let position = calculate_position(&tokens);
+
+    println!("{}", position.0 * position.1)
 }
 
-fn read_lines() -> Vec<i32> {
+fn calculate_position(coords : &Vec<(String, i32)>) -> (i32, i32) {
+    let mut x_pos = 0;
+    let mut y_pos = 0;
+
+    for coord in coords {
+        match (coord.0.as_str(), coord.1) {
+            ("up", step) => {y_pos = y_pos - step}
+            ("down", step) => {y_pos = y_pos + step}
+            ("forward", step) => {x_pos = x_pos + step}
+            ("backward", step) => {x_pos = x_pos - step}
+            _ => {
+                println!("Error");
+                exit(1)
+            }
+        }
+    }
+
+    return (x_pos, y_pos)
+}
+
+fn split_lines(lines: Vec<String>) -> Vec<(String, i32)> {
+    let mut input: Vec<(String, i32)> = vec![];
+    for line in lines {
+        let split = line.split_ascii_whitespace().collect::<Vec<&str>>();
+        input.push((split[0].to_ascii_lowercase(), split[1].parse().unwrap()))
+    }
+
+    return input;
+}
+
+fn read_lines() -> Vec<String> {
     let file = File::open("input.txt").expect("Unable to open file");
     let reader = io::BufReader::new(file);
     let lines = reader.lines();
     lines.filter_map(io::Result::ok)
-        .map(|s| s.parse::<i32>().unwrap())
+        .map(|s| s.parse().unwrap())
         .collect()
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+
+    #[test]
+    fn test_calculate_position() {
+        let coords = vec![
+            ("forward".to_ascii_lowercase(), 5),
+            ("down".to_ascii_lowercase(), 5),
+            ("forward".to_ascii_lowercase(), 8),
+            ("up".to_ascii_lowercase(), 3),
+            ("down".to_ascii_lowercase(), 8),
+            ("forward".to_ascii_lowercase(), 2),
+        ];
+
+        let result = calculate_position(&coords);
+        let mult = result.0 * result.1;
+        assert_eq!(result.0, 15);
+        assert_eq!(result.1, 10);
+        assert_eq!(mult, 150);
+    }
 }
