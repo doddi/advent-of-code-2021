@@ -7,18 +7,54 @@ fn main() {
 
 }
 
-fn get_gamma(lines: &Vec<u32>) -> u32 {
-    let mut total = 0;
-    for i in 0..15 {
-        let common_zero = more_zero_bits(&lines, i);
-        if !common_zero {
-            total = total + (1 << i)
+fn get_oxygen_generator_rating(lines: &Vec<u32>, bits_to_check: u32) -> u32 {
+    let bits = bits_to_check-1;
+    let mut cloned_lines = lines.clone();
+    for i in 0..bits+1 as u32 {
+        let most_common_bit = one_is_most_common_bit(&cloned_lines, bits-i);
+
+        let mut v = vec![];
+        for cloned_line in cloned_lines {
+            let temp = (cloned_line >> (bits-i)) & 0x01;
+            if most_common_bit == true && temp == 1{
+                v.push(cloned_line)
+            } else if most_common_bit == false && temp == 0 {
+                v.push(cloned_line)
+            }
+        }
+        cloned_lines = v;
+        if cloned_lines.len() == 1 {
+            break;
         }
     }
-    return total;
+    return cloned_lines[0];
 }
 
-fn more_zero_bits(inputs: &Vec<u32>, bit: u16) -> bool {
+fn get_co2_scrubber_rating(lines: &Vec<u32>, bits_to_check: u32) -> u32 {
+    let bits = bits_to_check-1;
+    let mut cloned_lines = lines.clone();
+    for i in 0..bits+1 as u32 {
+        let mut most_common_bit = !one_is_most_common_bit(&cloned_lines, bits-i);
+
+        let mut v = vec![];
+        for cloned_line in cloned_lines {
+            let temp = (cloned_line >> (bits-i)) & 0x01; // Checks if the relevant bit position is set in current value
+            if most_common_bit == true && temp == 1{
+                v.push(cloned_line)
+            } else if most_common_bit == false && temp == 0 {
+                v.push(cloned_line)
+            }
+        }
+
+        cloned_lines = v;
+        if cloned_lines.len() == 1 {
+            break;
+        }
+    }
+    return cloned_lines[0];
+}
+
+fn one_is_most_common_bit(inputs: &Vec<u32>, bit: u32) -> bool {
     let mut zero = 0;
     let mut one = 0;
 
@@ -31,7 +67,10 @@ fn more_zero_bits(inputs: &Vec<u32>, bit: u16) -> bool {
         }
     }
 
-    return zero > one;
+    if zero > one {
+        return false;
+    }
+    return true;
 }
 
 fn read_lines(file: &str) -> Vec<u32> {
@@ -68,7 +107,7 @@ mod test {
     fn test_common_bits() {
         let result = read_lines("input/test.txt");
 
-        let val = more_zero_bits(&result, 4);
+        let val = one_is_most_common_bit(&result, 4);
 
         assert_eq!(val, false)
     }
@@ -77,27 +116,22 @@ mod test {
     fn test_common_value() {
         let result = read_lines("input/test.txt");
 
-        let val = get_gamma(&result);
+        let oxy = get_oxygen_generator_rating(&result, 5);
+        assert_eq!(oxy, 23);
 
-        assert_eq!(val, 22);
+        let co2 = get_co2_scrubber_rating(&result, 5);
+        assert_eq!(co2, 10)
     }
 
     #[test]
-    fn test_value() {
-        let results = read_lines("input/test.txt");
+    fn test_real_value() {
+        let result = read_lines("input/input.txt");
 
-        let gamma = get_gamma(&results);
-        let val = gamma * (!gamma & 0x1F);
-        assert_eq!(val, 198);
-    }
+        let oxy = get_oxygen_generator_rating(&result, 12);
+        let co2 = get_co2_scrubber_rating(&result, 12);
 
-    #[test]
-    fn test_input_value() {
-        let results = read_lines("input/input.txt");
-
-        let gamma = get_gamma(&results);
-        let epsilon = !gamma & 0xFFF;
-        let val = gamma * epsilon;
-        assert_eq!(val, 3633500);
+        assert_eq!(oxy, 1327);
+        assert_eq!(co2, 3429);
+        assert_eq!(oxy * co2, 4550283);
     }
 }
