@@ -4,76 +4,45 @@ use std::io::BufRead;
 use std::process::exit;
 
 fn main() {
-    let lines = read_lines();
 
-    let tokens = split_lines(lines);
-
-    let position = calculate_aim(&tokens);
-
-    println!("{}", position.0 * position.1)
 }
 
-fn calculate_position(coords : &Vec<(String, i32)>) -> (i32, i32) {
-    let mut x_pos = 0;
-    let mut y_pos = 0;
+fn get_gamma(lines: &Vec<u32>) -> u32 {
+    let mut total = 0;
+    for i in 0..15 {
+        let common_zero = more_zero_bits(&lines, i);
+        if !common_zero {
+            total = total + (1 << i)
+        }
+    }
+    return total;
+}
 
-    for coord in coords {
-        match (coord.0.as_str(), coord.1) {
-            ("up", step) => {y_pos = y_pos - step}
-            ("down", step) => {y_pos = y_pos + step}
-            ("forward", step) => {x_pos = x_pos + step}
-            ("backward", step) => {x_pos = x_pos - step}
-            _ => {
-                println!("Error");
-                exit(1)
-            }
+fn more_zero_bits(inputs: &Vec<u32>, bit: u16) -> bool {
+    let mut zero = 0;
+    let mut one = 0;
+
+    for input in inputs {
+        let val = (input >> (bit)) & 1;
+        if val == 1 {
+            one = one + 1;
+        } else {
+            zero = zero + 1;
         }
     }
 
-    return (x_pos, y_pos)
+    return zero > one;
 }
 
-fn calculate_aim(coords : &Vec<(String, i32)>) -> (i32, i32) {
-    let mut aim = 0;
-    let mut x_pos = 0;
-    let mut y_pos = 0;
-
-    for coord in coords {
-        match (coord.0.as_str(), coord.1) {
-            ("up", step) => {aim = aim - step}
-            ("down", step) => {aim = aim + step}
-            ("forward", step) => {
-                x_pos = x_pos + step;
-                y_pos = y_pos + (aim * step)
-            }
-            ("backward", step) => {x_pos = x_pos - step}
-            _ => {
-                println!("Error");
-                exit(1)
-            }
-        }
-    }
-
-    return (x_pos, y_pos)
-}
-
-fn split_lines(lines: Vec<String>) -> Vec<(String, i32)> {
-    let mut input: Vec<(String, i32)> = vec![];
-    for line in lines {
-        let split = line.split_ascii_whitespace().collect::<Vec<&str>>();
-        input.push((split[0].to_ascii_lowercase(), split[1].parse().unwrap()))
-    }
-
-    return input;
-}
-
-fn read_lines() -> Vec<String> {
-    let file = File::open("input.txt").expect("Unable to open file");
+fn read_lines(file: &str) -> Vec<u32> {
+    let file = File::open(file).expect("Unable to open file");
     let reader = io::BufReader::new(file);
     let lines = reader.lines();
-    lines.filter_map(io::Result::ok)
-        .map(|s| s.parse().unwrap())
-        .collect()
+    let result = lines.filter_map(io::Result::ok)
+        .map(|s| u32::from_str_radix(&s, 2).unwrap())
+        .collect();
+
+    return result
 }
 
 #[cfg(test)]
@@ -82,38 +51,53 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_calculate_position() {
-        let coords = vec![
-            ("forward".to_ascii_lowercase(), 5),
-            ("down".to_ascii_lowercase(), 5),
-            ("forward".to_ascii_lowercase(), 8),
-            ("up".to_ascii_lowercase(), 3),
-            ("down".to_ascii_lowercase(), 8),
-            ("forward".to_ascii_lowercase(), 2),
-        ];
-
-        let result = calculate_position(&coords);
-        let mult = result.0 * result.1;
-        assert_eq!(result.0, 15);
-        assert_eq!(result.1, 10);
-        assert_eq!(mult, 150);
+    fn test_can_read_binary() {
+        let result = read_lines("input/input.txt");
+        assert_eq!(result[0], 533)
     }
 
     #[test]
-    fn test_calculate_aim() {
-        let coords = vec![
-            ("forward".to_ascii_lowercase(), 5),
-            ("down".to_ascii_lowercase(), 5),
-            ("forward".to_ascii_lowercase(), 8),
-            ("up".to_ascii_lowercase(), 3),
-            ("down".to_ascii_lowercase(), 8),
-            ("forward".to_ascii_lowercase(), 2),
-        ];
+    fn test_count_common_bit() {
+        let val = 0x55;
+        assert_eq!(val >> 0 & 1, 1);
+        assert_eq!(val >> 1 & 1, 0);
+        assert_eq!(val >> 2 & 1, 1);
+    }
 
-        let result = calculate_aim(&coords);
-        let mult = result.0 * result.1;
-        assert_eq!(result.0, 15);
-        assert_eq!(result.1, 60);
-        assert_eq!(mult, 900);
+    #[test]
+    fn test_common_bits() {
+        let result = read_lines("input/test.txt");
+
+        let val = more_zero_bits(&result, 4);
+
+        assert_eq!(val, false)
+    }
+
+    #[test]
+    fn test_common_value() {
+        let result = read_lines("input/test.txt");
+
+        let val = get_gamma(&result);
+
+        assert_eq!(val, 22);
+    }
+
+    #[test]
+    fn test_value() {
+        let results = read_lines("input/test.txt");
+
+        let gamma = get_gamma(&results);
+        let val = gamma * (!gamma & 0x1F);
+        assert_eq!(val, 198);
+    }
+
+    #[test]
+    fn test_input_value() {
+        let results = read_lines("input/input.txt");
+
+        let gamma = get_gamma(&results);
+        let epsilon = !gamma & 0xFFF;
+        let val = gamma * epsilon;
+        assert_eq!(val, 3633500);
     }
 }
